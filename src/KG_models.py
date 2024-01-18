@@ -29,7 +29,7 @@ class IntentKG(nn.Module):
     KG 聚合后，code采用intent方式搜集KG信息；根据患者历史visit进行intent搜集KG信息。同时，保证搜集到的信息越多越好
     在最后visit level利用知识聚合
     """
-    def __init__(self, voc_size, ehr_adj, ddi_adj, ddi_mask_H, 
+    def __init__(self, voc_size, ehr_adj, 
                 n_nodes, n_intents, n_relations, n_entities, kg_graph, kg_adj_mat, sim_regularity=1e-4, codeMI_regularity=1e-2, emb_dim=128, 
                 context_hops = 3, ind='mi', node_dropout=True, node_dropout_rate=0.3, mess_dropout=True, mess_dropout_rate=0.3,
                 device=torch.device('cpu:0'), num_inds=32, dim_hidden=128, num_heads=2, ln=False, isab_num=2, kgloss_alpha=0.001): 
@@ -38,7 +38,6 @@ class IntentKG(nn.Module):
         self.emb_dim = emb_dim
         self.device = device
         self.nhead = num_heads
-        self.ddi_adj = ddi_adj
         self.SOS_TOKEN = voc_size[2]        # start of sentence
         self.END_TOKEN = voc_size[2]+1      # end   新增的两个编码，两者均是针对于药物的embedding
         self.MED_PAD_TOKEN = voc_size[2]+2      # 用于embedding矩阵中的padding（全为0）
@@ -73,8 +72,6 @@ class IntentKG(nn.Module):
         dim_output = 1
         # num_outputs = 1
         # dim_output = voc_size[2]
-
-        self.tensor_ddi_mask_H = torch.FloatTensor(ddi_mask_H).to(device)
 
         # dig_num * emb_dim
         self.diag_embedding = nn.Sequential(
@@ -128,11 +125,6 @@ class IntentKG(nn.Module):
         # self.output_layer = nn.Linear(emb_dim, voc_size[2])
         
         self.weight = nn.Parameter(torch.tensor([0.3]), requires_grad=True)       
-
-        # 加入DDI图
-        self.tensor_ddi_adj = torch.FloatTensor(ddi_adj).to(device)
-        self.inter = nn.Parameter(torch.FloatTensor(1))
-        self.kgloss_alpha = kgloss_alpha #nn.Parameter(torch.FloatTensor())
 
         ## KG init
         self._init_weight()
@@ -310,16 +302,6 @@ class IntentKG(nn.Module):
         neg_pred_prob = torch.einsum("nsc,nsk->nsck",[neg_pred_prob, neg_pred_prob])  # [seq, voc_size, voc_size]
 
 
-        batch_neg = 1/self.tensor_ddi_adj.shape[0] * neg_pred_prob.mul(self.tensor_ddi_adj).sum(dim=[1,2]).mean() # (seq,).mean()
-        kg_ddi_score = self.kgloss_alpha * batch_neg
-
-        # # 9. 这里计算预测的药物序列的DDI然后以已知的DDI矩阵进行约束
-        # sigmoid_output = torch.sigmoid(self.visit_dropout(visit_output))
-        # sigmoid_output_ddi = torch.matmul(sigmoid_output.unsqueeze(2).transpose(-1, -2),sigmoid_output.unsqueeze(2)) # [batch_size, max_seq_length, vocab_size, vocab_size]
-        # kg_ddi = torch.from_numpy(self.ddi_adj).to(sigmoid_output.device).unsqueeze(0).unsqueeze(0).repeat(batch_size, max_seq_length, 1, 1) # [batch_size, max_seq_length, vocab_siz, vocab_size]
-        # kg_ddi_score = self.kgloss_alpha * torch.sum(kg_ddi * sigmoid_output_ddi, dim=[-1,-2]).mean()
-        
-
-        return visit_output, kg_ddi_score , self.codeMI_regularity*code_mi_loss, self.sim_regularity*intent_cor
+        return visit_output, 0 , self.codeMI_regularity*code_mi_loss, self.sim_regularity*intent_cor
         #, curt_visit_enc, original_visit_enc
 
