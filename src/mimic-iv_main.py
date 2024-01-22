@@ -190,12 +190,12 @@ def test_1(model, device, test_dataloader, diag_voc, pro_voc, med_voc, voc_size,
 
 def main(args):
     # load data
-    data_path = "./data/mimic-iv/output/records_ori_iv.pkl"
-    voc_path = "./data/mimic-iv/output/voc_iv_sym1_mulvisit.pkl"
+    data_path = "../data/mimic-iv/output/records_ori_iv.pkl"
+    voc_path = "../data/mimic-iv/output/voc_iv_sym1_mulvisit.pkl"
 
     # UMLS path
-    kg_path = './data/mimic-iv/UMLS_data/processed_data/kg.pkl'
-    kg_voc_path = './data/mimic-iv/UMLS_data/processed_data/code2cui_voc.pkl'
+    kg_path = '../data/mimic-iv/processed_data/kg.pkl'
+    kg_voc_path = '../data/mimic-iv/processed_data/code2cui_voc.pkl'
 
     # device = torch.device('cuda')
     # 设置使用哪些显卡进行训练
